@@ -1,0 +1,84 @@
+<head>
+    <link rel="stylesheet" href="./index.css">
+    
+</head>
+<body>
+    <div class="main">
+        <div class="infoBox">
+            <div>
+                <button onclick="openModal(event.target.id)" id="btnOpenCurrency">Получить курсы валют</button>
+                <button onclick="openModal(event.target.id)" id="btnOpenConvert">Конвертировать</button>
+            </div>
+            <div id="currencyInfoBox">
+                <table>
+                    <tr>
+                        <th>Дата</th>
+                        <th>Валюта</th>
+                        <th>Курс</th>
+                    </tr>
+                    <tr class="columnInfo">
+                        <td>инфо</td>
+                        <td>инфо</td>
+                        <td>инфо</td>
+                    </tr>
+                    <tr class="columnInfo">
+                        <td>инфо</td>
+                        <td>инфо</td>
+                        <td>инфо</td>
+                    </tr>
+                    <tr class="columnInfo">
+                        <td>инфо</td>
+                        <td>инфо</td>
+                        <td>инфо</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="modalBackground">
+            <div id="modalCurrency" class="modalRoot">
+                <h2>Получить курсы валют</h2>
+                <div>
+                    <form action="" id="modalFormCurrency" class="modalForm">
+                        <label for="start-date">От</label>
+                        <input type="date" id="start-date" min="1900-01-01" max="2040-01-01" name="from">
+                        <label for="end-date">до</label>
+                        <input type="date" id="end-date" min="1900-01-01" max="2040-01-01" name="to">
+                        <select name="currency">
+                            <option value="USD">USD</option>
+                            <option value="EUR">EUR</option>
+                            <option value="AMD">AMD</option>
+                        </select>
+                        <div>
+                            <button onclick="getCurrency(document.getElementById('modalFormCurrency'))">Получить</button>
+                            <button onclick="closeModal()">Отмена</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div id="modalConvert" class="modalRoot">
+                <h2>Конвертировать валюту в рубли</h2>
+                    <form action="" id="modalFormConvert" class="modalForm">
+                        <input type="date" min="1900-01-01" max="2040-01-01" name="date">
+                        <select name="currency">
+                            <option value="USD">USD</option>
+                            <option value="EUR">EUR</option>
+                            <option value="AMD">AMD</option>
+                        </select>
+                        <input type="number" name="amount" placeholder="Введите сумму">
+                        <div>
+                            <button id="btnOpenConvertedAmount" onclick="convert(document.getElementById('modalFormConvert'), event.target.id)">Конвертировать</button>
+                            <button onclick="closeModal()">Отмена</button>
+                        </div>
+                    </form>
+            </div>
+            
+            <div id="modalConvertedAmount" class="modalRoot">
+                <h2>Конвертированная валюта</h2>
+                <p id="convertedAmountInfo"></p>
+            </div>
+        </div>
+    </div>
+    <script src="index.js" async></script>
+</body>
