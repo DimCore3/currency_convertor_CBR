@@ -1,43 +1,44 @@
 "use strict";
 
-const modalBackground = document.getElementsByClassName('modalBackground')[0];
-const formCurrency = document.getElementById('modalFormCurrency');
-const formConvert = document.getElementById('modalFormConvert');
-
 async function getCurrency(fromDate, toDate, currency) {
-
+    isLoading(true);
     if (isDataCorrect(fromDate, toDate)) {
-        const myModal = document.getElementById('modalCurrency')
-        const modal = bootstrap.Modal.getInstance(myModal);
-        modal.hide();
         const startDate = new Date(fromDate);
         const endDate = new Date(toDate);
-        const table = document.createElement('table');
-        const thead = document.createElement('thead');
-        const tbody = document.createElement('tbody');
-        table.appendChild(thead);
-        table.appendChild(tbody);
-        table.className = 'table table-striped';
+        const myModal = document.getElementById('modalCurrency');
+        const modal = bootstrap.Modal.getInstance(myModal);
+        modal.hide();
         const currencyInfoBox = document.getElementById('currencyInfoBox');
-        currencyInfoBox.removeChild(currencyInfoBox.firstElementChild)
-        currencyInfoBox.appendChild(table);
-        currencyInfoBox.style.display = 'flex';
+        currencyInfoBox.className = 'd-block d-flex'
         currencyInfoBox.style.overflow = 'scroll';
         currencyInfoBox.style.maxHeight = '80vh';
-        addRow('th', thead, 'Дата', 'Валюта', 'Курс');
-
+        const tbody = document.createElement('tbody');
+        const newTable = document.getElementById('curTable');
+        newTable.removeChild(newTable.lastElementChild)
+        
         for (let date = startDate; date <= endDate; date.setDate(date.getDate() + 1)) {
             let result = await getCurrencyList(date, currency);
-
+            
             if (Object.keys(result).length !== 0) {
-                addRow('td', tbody, date.toLocaleDateString(), currency, (result.Value / result.Nominal).toFixed(4));
-
+                newAddRow(tbody, date.toLocaleDateString(), currency, (result.Value / result.Nominal).toFixed(4));
+                
             } else {
                 return;
             }
         };
+        newTable.appendChild(tbody);
     }
+    isLoading(false);
 };
+
+function isLoading(bool) {
+    let loadingSpinner = document.getElementById('loading');
+    if (bool) {
+        loadingSpinner.className = 'spinner-border position-absolute top-50 start-50'
+    } else {
+        loadingSpinner.className = 'spinner-border d-none'
+    };
+}
 
 function isDataCorrect(fromDate, toDate) {
     if (fromDate && toDate) {
@@ -50,15 +51,13 @@ function isDataCorrect(fromDate, toDate) {
     return false;
 }
 
-function addRow(type, tbody, date, currency, amount) {
+function newAddRow(tbody, date, currency, amount) {
     const dataList = [date, currency, amount];
-    const tr = document.createElement('tr');
-    tbody.appendChild(tr);
-    dataList.forEach((data) => {
-        const element = document.createElement(type);
-        tr.appendChild(element);
-        element.innerText = data;
-    });
+    var template = document.querySelector('#productrow');
+    let clone = template.content.cloneNode(true);
+    let td = clone.querySelectorAll("td");
+    dataList.forEach((data, index) => td[index].textContent = data);
+    tbody.appendChild(clone);
 }
 
 async function convert(date, currency, amount) {
@@ -127,7 +126,7 @@ async function getCurrencyList(date, currency, numItteration) {
 
 function leftFillNum(num, targetLength) {
     return num.toString().padStart(targetLength, "0");
-  }
+}
 
 function setMaxDatesForInputs() {
     const inputIds = [
