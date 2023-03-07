@@ -1,140 +1,155 @@
 "use strict";
 
 const modalBackground = document.getElementsByClassName('modalBackground')[0];
-const allModalForms = document.getElementsByClassName('modalForm');
-const modalRoot = document.getElementsByClassName('modalRoot');
 const formCurrency = document.getElementById('modalFormCurrency');
 const formConvert = document.getElementById('modalFormConvert');
 
-const getCurrency = async (element) => {
-    if (element.from.value && element.to.value && element.from.value < element.to.value) {
-        closeModal();
-        const startDate = new Date(element.from.value);
-        const endDate = new Date(element.to.value);
-        const currency = element.currency.value;
+async function getCurrency(fromDate, toDate, currency) {
+
+    if (isDataCorrect(fromDate, toDate)) {
+        const myModal = document.getElementById('modalCurrency')
+        const modal = bootstrap.Modal.getInstance(myModal);
+        modal.hide();
+        const startDate = new Date(fromDate);
+        const endDate = new Date(toDate);
         const table = document.createElement('table');
-        let currencyInfoBox = document.getElementById('currencyInfoBox');
+        const thead = document.createElement('thead');
+        const tbody = document.createElement('tbody');
+        table.appendChild(thead);
+        table.appendChild(tbody);
+        table.className = 'table table-striped';
+        const currencyInfoBox = document.getElementById('currencyInfoBox');
         currencyInfoBox.removeChild(currencyInfoBox.firstElementChild)
         currencyInfoBox.appendChild(table);
         currencyInfoBox.style.display = 'flex';
-        addRow(table, 'Дата', 'Валюта', 'Курс');
-        
-        for (let date = startDate; date <= endDate; date.setDate(date.getDate() + 1)) {
-            let result = await getCurrencyList(date.toLocaleDateString(), currency);
-            if (Object.keys(result).length !== 0) {
-                addRow(table, date.toLocaleDateString(), currency, (result.Value / result.Nominal).toFixed(2))
-            }
-        }
+        currencyInfoBox.style.overflow = 'scroll';
+        currencyInfoBox.style.maxHeight = '80vh';
+        addRow('th', thead, 'Дата', 'Валюта', 'Курс');
 
-    } else {
-        alert('Введите корректные данные');
+        for (let date = startDate; date <= endDate; date.setDate(date.getDate() + 1)) {
+            let result = await getCurrencyList(date, currency);
+
+            if (Object.keys(result).length !== 0) {
+                addRow('td', tbody, date.toLocaleDateString(), currency, (result.Value / result.Nominal).toFixed(4));
+
+            } else {
+                return;
+            }
+        };
     }
 };
 
-const addRow = (table, date, currency, amount) => {
-    let tr = document.createElement('tr');
-    let tdDate = document.createElement('td');
-    let tdCurrency = document.createElement('td');
-    let trAmount = document.createElement('td');
-    table.appendChild(tr);                
-    tr.appendChild(tdDate);
-    tr.appendChild(tdCurrency);
-    tr.appendChild(trAmount);
-    tdDate.innerText = date;
-    tdCurrency.innerText = currency;
-    trAmount.innerText = amount;
+function isDataCorrect(fromDate, toDate) {
+    if (fromDate && toDate) {
+        if (fromDate <= toDate) {
+            return true;
+        } else {
+            alert('Диапазон дат указан некорректно!')
+        }
+    }
+    return false;
 }
 
-const convert = async (element, btnId) => {
-    try {
-        if (element.date.value && element.amount.value) {
-            const { date, currency, amount } = element;
-            const dateValue = new Date(date.value).toLocaleDateString();
-            const currencyValue = currency.value;
-            const amountValue = amount.value;
-            let result = await getCurrencyList(dateValue, currencyValue);
-            
-            if (Object.keys(result).length !== 0) {
-                const fullAmount = (result.Value * amountValue) / result.Nominal;
-                document.getElementById('convertedAmountInfo').innerText = `${amountValue} ${result.Name} = ${fullAmount.toFixed(2)} RUB`;  
-                closeModal();
-                openModal(btnId);  
+function addRow(type, tbody, date, currency, amount) {
+    const dataList = [date, currency, amount];
+    const tr = document.createElement('tr');
+    tbody.appendChild(tr);
+    dataList.forEach((data) => {
+        const element = document.createElement(type);
+        tr.appendChild(element);
+        element.innerText = data;
+    });
+}
 
+async function convert(date, currency, amount) {
+    try {
+        document.getElementById('convertedAmountInfo').innerText = `Загрузка...`;
+        let dateNow = new Date();
+        let fullDate = new Date(date);
+        let roundedAmount = Number(amount).toFixed(2);
+
+        if (date && roundedAmount && amount && currency && dateNow > fullDate && Number(roundedAmount) === Number(amount)) {
+            const currentModalConvert = document.getElementById('modalConvert');
+            const currentModal = bootstrap.Modal.getInstance(currentModalConvert);
+            currentModal.hide();
+
+            const convertedAmountModal = document.getElementById('modalConvertedAmount');
+            const newModal = bootstrap.Modal.getOrCreateInstance(convertedAmountModal);
+            newModal.show();
+
+            const dateValue = new Date(date);
+            let result = await getCurrencyList(dateValue, currency);
+            if (Object.keys(result).length !== 0) {
+                const fullAmount = (result.Value * roundedAmount) / result.Nominal;
+                let text = `${roundedAmount} ${result.Name} = ${fullAmount.toFixed(2)} Рублей`;
+                document.getElementById('convertedAmountInfo').innerText = text;
             } else {
-                alert('Информация на ' + dateValue + ' отсутствует.')
+                newModal.hide();
+                return;
             }
         } else {
-            alert('Пожалуйста, заполните все поля.')
+            document.getElementById('convertedAmountInfo').innerText = 'Пожалуйста, заполните все поля.';
         }
 
-    } catch (error) {        
+    } catch (error) {
         alert('Ошибка: ' + error);
     }
 };
 
-// API тупит или есть ограничения, не всегда сразу отдаёт ответ
-async function getCurrencyList(date, currency) {
-    const [day, month, year] = date.split('.');
-    try {
-        const response = await fetch(`https://www.cbr-xml-daily.ru/archive/${year}/${month}/${day}/daily_json.js`)
-            .then(res => res.json())
-            .catch(error => console.log('error: ', error));
-        return response.Valute[currency];
-
-    } catch (error) {   
+async function getCurrencyList(date, currency, numItteration) {
+    let maxItteration = 30;
+    if (maxItteration < numItteration) {
+        alert('Максимальное колличество запросов!');
         return {}
     }
-}
+    let itteration = numItteration;
+    if (itteration === undefined) {
+        itteration = 1;
+    } else {
+        itteration = itteration + 1;
+    };
 
-const getModalByBtnId = (btnId) => {
-    const btnsForModalElements = [
-        {btn: 'btnOpenCurrency', modal: 'modalCurrency'},
-        {btn: 'btnOpenConvert', modal: 'modalConvert'},
-        {btn: 'btnOpenConvertedAmount', modal: 'modalConvertedAmount'},
+    try {
+        const day = leftFillNum(date.getDate(), 2);
+        const month = leftFillNum(date.getMonth() + 1, 2);
+        const year = leftFillNum(date.getFullYear(), 4);
+
+        const response = await fetch(`https://www.cbr-xml-daily.ru/archive/${year}/${month}/${day}/daily_json.js`)
+            .then(res => res.json())
+        return response.Valute[currency];
+
+    } catch (error) {
+        const newDate = new Date(date.getTime());
+        newDate.setDate(date.getDate() - 1);
+        return await getCurrencyList(newDate, currency, itteration);
+    }
+};
+
+function leftFillNum(num, targetLength) {
+    return num.toString().padStart(targetLength, "0");
+  }
+
+function setMaxDatesForInputs() {
+    const inputIds = [
+        'date-convert',
+        'start-date-currency',
+        'end-date-currency'
     ];
-
-    for (let element of btnsForModalElements) {
-        if (element.btn === btnId) {
-            return document.getElementById(element.modal)
-        }
-    }
-} 
-
-const openModal = (btnId) => {
-    setDisplayFlexOrNone(modalBackground);
-    setDisplayFlexOrNone(getModalByBtnId(btnId));
-};
-
-const closeModal = () => {
-    setDisplayFlexOrNone(modalBackground);
-    for (let element of modalBackground.children) {
-        element.style.display = 'none';
-    }
-};
-
-const setDisplayFlexOrNone = (element) => {
-    element.style.display = element.style.display === 'none' || element.style.display === '' ?  'flex' : 'none';
-}
- 
-const addListeners = () => {
-    modalBackground.addEventListener('click', (event) => {
-        setDisplayFlexOrNone(event.target);
-        for (let element of event.target.children) {
-            element.style.display = 'none';
-        }
+    inputIds.forEach((id) => {
+        let element = document.getElementById(id);
+        element.max = new Date().toISOString().split("T")[0];
     })
+}
+setMaxDatesForInputs();
 
-    for (let element of allModalForms) {
-        element.addEventListener('click', (event) => {
+function setPreventDefStopProp() {
+    const forms = document.querySelectorAll('.needs-validation');
+    forms.forEach(form => {
+        form.addEventListener('submit', event => {
             event.preventDefault();
-        });
-    }
-    
-    for (let element of modalRoot) {
-        element.addEventListener('click', (event) => {
             event.stopPropagation();
-        });
-    }
-};
-
-addListeners();
+            form.classList.add('was-validated')
+        })
+    })
+}
+setPreventDefStopProp();
