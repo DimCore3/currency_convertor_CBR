@@ -18,7 +18,6 @@ async function generateTable(startDate, endDate, currency) {
     let curTable = document.getElementById('curTable');
     createTable(curTable);
     
-    console.time('generateTableFor');
     for (let date = startDate; date <= endDate; date.setDate(date.getDate() + 1)) {
         result = await makeFetchRequest(date, currency, previousResultString);
         previousResultString = result !== {} ? JSON.stringify(result) : '{}';
@@ -29,7 +28,6 @@ async function generateTable(startDate, endDate, currency) {
             return;
         };
     };
-    console.timeEnd('generateTableFor');
     curTable.appendChild(tbody);
 }
 
@@ -93,7 +91,6 @@ async function convert(date, currency, amount) {
 };
 
 async function makeFetchRequest(date, currency, previousResultString = '{}', numIteration = 0) {
-    console.time('makeFetchRequest');
     const Address = 'https://www.cbr-xml-daily.ru/';
     let maxItteration = 30;
     if (maxItteration < numIteration) {
@@ -115,7 +112,6 @@ async function makeFetchRequest(date, currency, previousResultString = '{}', num
             lastDate.setDate(date.getDate() - 1);
             return makeFetchRequest(lastDate, currency, previousResultString, iteration);
         });
-    console.timeEnd('makeFetchRequest');
     return response;
 };
 
