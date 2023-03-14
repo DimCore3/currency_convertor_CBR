@@ -12,13 +12,16 @@ async function getCurrency(fromDate, toDate, currency) {
 };
 
 async function generateTable(startDate, endDate, currency) {
+    let result;
+    let previousResultString;
     let tbody = document.createElement('tbody');
     let curTable = document.getElementById('curTable');
     createTable(curTable);
     
+    console.time('generateTableFor');
     for (let date = startDate; date <= endDate; date.setDate(date.getDate() + 1)) {
-        let result = await makeFetchRequest(date, currency);
-        
+        result = await makeFetchRequest(date, currency, previousResultString);
+        previousResultString = result !== {} ? JSON.stringify(result) : '{}';
         if (Object.keys(result).length !== 0) {
             newAddRow(tbody, date.toLocaleDateString(), currency, (result.Value / result.Nominal).toFixed(4));
             
@@ -26,6 +29,7 @@ async function generateTable(startDate, endDate, currency) {
             return;
         };
     };
+    console.timeEnd('generateTableFor');
     curTable.appendChild(tbody);
 }
 
@@ -63,7 +67,7 @@ async function convert(date, currency, amount) {
         let dateNow = new Date();
         let fullDate = new Date(date);
         let roundedAmount = Number(amount).toFixed(2);
-
+        
         if (date && roundedAmount && amount && currency && dateNow > fullDate && Number(roundedAmount) === Number(amount)) {
             isLoading(true);
             showHideModal('hide', 'modalConvert')
@@ -88,7 +92,8 @@ async function convert(date, currency, amount) {
     isLoading(false);
 };
 
-async function makeFetchRequest(date, currency, numIteration) {
+async function makeFetchRequest(date, currency, previousResultString = '{}', numIteration = 0) {
+    console.time('makeFetchRequest');
     const Address = 'https://www.cbr-xml-daily.ru/';
     let maxItteration = 30;
     if (maxItteration < numIteration) {
@@ -103,10 +108,14 @@ async function makeFetchRequest(date, currency, numIteration) {
         .then(res => res.json())
         .then(res => res.Valute[currency])
         .catch(() => {
+            if (previousResultString !== '{}') {
+                return JSON.parse(previousResultString);
+            };
             let lastDate = new Date(date.getTime());
             lastDate.setDate(date.getDate() - 1);
-            return makeFetchRequest(lastDate, currency, iteration);
+            return makeFetchRequest(lastDate, currency, previousResultString, iteration);
         });
+    console.timeEnd('makeFetchRequest');
     return response;
 };
 
@@ -120,7 +129,7 @@ function showHideModal(action, id) {
         let modal = bootstrap.Modal.getInstance(element);
         modal.hide();
     };
-     
+    
     if (action === 'show') {
         let element = document.getElementById(id);
         let modal = bootstrap.Modal.getOrCreateInstance(element);
